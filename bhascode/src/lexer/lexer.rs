@@ -1,73 +1,4 @@
-use thiserror::Error;
-
-#[derive(Debug, Error)]
-pub enum LexerError {
-    #[error("Error attempting to read file: {0}")]
-    FileIO(#[from] std::io::Error),
-
-    #[error("Was expecting {expected:?}, found {found:?} instead.")]
-    MissingExpectedSymbol { expected: TokenType, found: Token },
-
-    #[error("Depth for Symbol {symbol:?} is already 0")]
-    MisbalancedSymbol { symbol: char, open: char },
-
-    #[error("Found unknown symbol {symbol:?}")]
-    UnknownSymbol { symbol: String },
-
-    #[error("Cannot create Numeric Literal due to invalid character {raw:?}")]
-    NumericLiteralError { raw: String, hint: Hints },
-}
-
-pub type Token = TokenType;
-#[derive(Debug)]
-pub enum TokenType {
-    // End of Token Stream
-    EOF,
-
-    // ., [, (
-    Punctuation { raw: char, kind: PunctuationKind },
-    // -, +, *
-    Operator(String),
-    Identifier(String),
-    Char(char),
-    Numeric { raw: String, hint: Hints },
-    Unknown(char), // Could also be read as unimplemented!
-}
-
-#[derive(Debug)]
-pub enum PunctuationKind {
-    // (
-    Open(usize),
-
-    // )
-    Close(usize),
-
-    // , ;
-    Seperator,
-}
-
-#[derive(Debug)]
-pub enum Hints {
-    IntegerValue,
-    FloatingPointValue,
-    String,
-
-    NoHint,
-    ExtraneousSymbol,
-    MissingExpectedSymbol,
-}
-
-pub struct Lexer<'a> {
-    // Tracking in a Human-Readable Format
-    pub cur_line: usize,
-    pub cur_col: usize,
-
-    // Codepoint Offset (Bytes Read)
-    pub cp_offset: usize,
-
-    chars: std::iter::Peekable<std::str::Chars<'a>>,
-    punctuation_state: std::collections::HashMap<char, usize>,
-}
+use crate::lexer::*;
 
 impl<'a> Lexer<'a> {
     pub fn new(chars: &'a str) -> Lexer<'a> {
@@ -135,39 +66,39 @@ impl<'a> Lexer<'a> {
     fn parse_number(&mut self, start: char) -> Result<TokenType, LexerError> {
         let mut seen_decimal_point = false;
         let mut seen_expression = false;
-        let mut num = start.to_string();
+
+        let mut raw = start.to_string();
+        let mut hint = Hints::IntegerValue;
         let radix = 10;
 
         if start == '.' {
-            return Err(LexerError::NumericLiteralError {
-                raw: num.clone(),
-                hint: Hints::FloatingPointValue,
-            });
+            hint = Hints::MissingExpectedSymbol;
+            return Err(LexerError::NumericLiteralError { raw, hint });
         }
 
         loop {
             match self.chars.peek() {
                 Some(c) if *c == '.' && seen_decimal_point => {
-                    num.push(*c);
+                    raw.push(*c);
                     self.consume_char();
-                    return Err(LexerError::NumericLiteralError {
-                        raw: num.clone(),
-                        hint: Hints::ExtraneousSymbol,
-                    });
+                    hint = Hints::ExtraneousSymbol;
+                    return Err(LexerError::NumericLiteralError { raw, hint });
                 }
                 Some(c) if *c == '.' && !seen_decimal_point && !seen_expression => {
                     seen_decimal_point = true;
-                    num.push(*c);
+                    hint = Hints::FloatingPointValue;
+                    raw.push(*c);
                     self.consume_char();
                 }
                 Some(c) if *c == 'e' || *c == 'E' && !seen_expression => {
                     seen_expression = true;
-                    num.push(*c);
+                    hint = Hints::FloatingPointValue;
+                    raw.push(*c);
                     self.consume_char();
 
                     match self.chars.peek() {
                         Some(c) if *c == '+' || *c == '-' => {
-                            num.push(*c);
+                            raw.push(*c);
                             self.consume_char();
                         }
                         _ => {}
@@ -175,48 +106,33 @@ impl<'a> Lexer<'a> {
 
                     match self.chars.peek() {
                         Some(c) if c.is_whitespace() => {
-                            return Err(LexerError::NumericLiteralError {
-                                raw: num.clone(),
-                                hint: Hints::MissingExpectedSymbol,
-                            });
+                            hint = Hints::MissingExpectedSymbol;
+                            return Err(LexerError::NumericLiteralError { raw, hint });
                         }
                         Some(c) if !c.is_digit(radix) => {
-                            num.push(*c);
+                            raw.push(*c);
                             self.consume_char();
-                            return Err(LexerError::NumericLiteralError {
-                                raw: num,
-                                hint: Hints::ExtraneousSymbol,
-                            });
+                            hint = Hints::ExtraneousSymbol;
+                            return Err(LexerError::NumericLiteralError { raw, hint });
                         }
                         None => {
-                            return Err(LexerError::NumericLiteralError {
-                                raw: num,
-                                hint: Hints::MissingExpectedSymbol,
-                            });
+                            hint = Hints::MissingExpectedSymbol;
+                            return Err(LexerError::NumericLiteralError { raw, hint });
                         }
                         _ => {}
                     }
                 }
                 Some(c) if c.is_digit(radix) => {
-                    num.push(*c);
+                    raw.push(*c);
                     self.consume_char();
                 }
                 Some(c) if c.is_ascii_alphabetic() || c.is_digit(10) => {
-                    num.push(*c);
-                    return Err(LexerError::NumericLiteralError {
-                        raw: num,
-                        hint: Hints::String,
-                    });
+                    raw.push(*c);
+                    hint = Hints::String;
+                    return Err(LexerError::NumericLiteralError { raw, hint });
                 }
                 _ => {
-                    break Ok(TokenType::Numeric {
-                        raw: num,
-                        hint: if seen_decimal_point || seen_expression {
-                            Hints::FloatingPointValue
-                        } else {
-                            Hints::IntegerValue
-                        },
-                    });
+                    break Ok(TokenType::Numeric { raw, hint });
                 }
             };
         }
