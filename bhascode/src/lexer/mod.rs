@@ -31,9 +31,12 @@ pub enum TokenType {
     // -, +, *
     Operator(String),
     Identifier(String),
+    String(String),
     Char(char),
     Numeric { raw: String, hint: Hints },
     Unknown(char), // Could also be read as unimplemented!
+    Any,
+    None,
 }
 
 #[derive(Debug)]

@@ -60,6 +60,48 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    fn parse_identifier(&mut self, c: char) -> Result<TokenType, LexerError> {
+        let mut buf = String::new();
+        buf.push(c);
+
+        loop {
+            match self.chars.peek() {
+                Some(c) if c.is_ascii_punctuation() && *c != '_' => {
+                    break Ok(TokenType::Identifier(buf))
+                }
+
+                Some(c) if c.is_ascii_alphanumeric() || *c == '_' => {
+                    buf.push(*c);
+                    self.chars.next();
+                }
+                _ => break Ok(TokenType::Identifier(buf)),
+            }
+        }
+    }
+    fn parse_string(&mut self) -> Result<TokenType, LexerError> {
+        let mut buf = String::new();
+        let mut has_found_escape = false;
+
+        loop {
+            match self.chars.next() {
+                Some('"') if !has_found_escape => return Ok(TokenType::String(buf)),
+                Some(c) if c == '\\' => {
+                    has_found_escape = true;
+                }
+                Some(c) => {
+                    buf.push(c);
+                    has_found_escape = false;
+                }
+                None => {
+                    return Err(LexerError::MissingExpectedSymbol {
+                        expected: TokenType::Char('"'),
+                        found: TokenType::None,
+                    })
+                }
+            }
+        }
+    }
+
     /// Iterates over a string and attmepts to parse a number
     ///
     /// * `start`:
@@ -152,6 +194,8 @@ impl<'a> Lexer<'a> {
                 kind: PunctuationKind::Close(self.push_close_punctuation(c)?),
             }),
             '0'..='9' => Ok(self.parse_number(c)?),
+            '"' => Ok(self.parse_string()?),
+            c if c.is_ascii_alphabetic() || c == '_' => Ok(self.parse_identifier(c)?),
             _ => Err(LexerError::UnknownSymbol {
                 symbol: (c.to_string()),
             }),
