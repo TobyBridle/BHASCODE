@@ -185,6 +185,7 @@ impl<'a> Lexer<'a> {
     /// * `c`:
     fn transform_type(&mut self, c: char) -> Result<TokenType, LexerError> {
         match c {
+            // Punctuation
             '(' | '[' | '{' => Ok(TokenType::Punctuation {
                 raw: c,
                 kind: PunctuationKind::Open(self.push_open_punctuation(c)),
@@ -193,9 +194,19 @@ impl<'a> Lexer<'a> {
                 raw: c,
                 kind: PunctuationKind::Close(self.push_close_punctuation(c)?),
             }),
-            '0'..='9' => Ok(self.parse_number(c)?),
-            '"' => Ok(self.parse_string()?),
+
+            // Identifiers / Keywords
             c if c.is_ascii_alphabetic() || c == '_' => Ok(self.parse_identifier(c)?),
+
+            // Parsing Numbers
+            '0'..='9' => Ok(self.parse_number(c)?),
+
+            // Math Operators
+            '+' | '-' | '*' | '/' | '%' | '=' => Ok(TokenType::Operator(c.to_string())),
+
+            // Strings
+            '"' => Ok(self.parse_string()?),
+
             _ => Err(LexerError::UnknownSymbol {
                 symbol: (c.to_string()),
             }),
