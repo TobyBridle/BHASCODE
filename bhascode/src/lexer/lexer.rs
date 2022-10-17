@@ -135,8 +135,9 @@ impl<'a> Lexer<'a> {
                 raw: buf,
                 hint: Hints::ExtraneousSymbol,
             };
+            // self.cur_col - 1 because we want to point to the start of the char literal
             program_error!(
-                format!("{}:{} - {}", self.cur_line, self.cur_col, err),
+                format!("{}:{} - {}", self.cur_line, self.cur_col - 1, err),
                 "Lexer"
             );
             return Err(err);
@@ -147,8 +148,9 @@ impl<'a> Lexer<'a> {
                     raw: buf,
                     hint: Hints::EmptyCharLiteral,
                 };
+                // self.cur_col - 1 because we want to point to the start of the char literal
                 program_error!(
-                    format!("{}:{} - {}", self.cur_line, self.cur_col, err),
+                    format!("{}:{} - {}", self.cur_line, self.cur_col - 1, err),
                     "Lexer"
                 );
                 return Err(err);
@@ -257,7 +259,21 @@ impl<'a> Lexer<'a> {
             '0'..='9' => Ok(self.parse_number(c)?),
 
             // Math Operators
-            '+' | '-' | '*' | '/' | '%' | '=' => Ok(TokenType::Operator(c.to_string())),
+            '+' | '*' | '/' | '%' | '=' => Ok(TokenType::Operator(c.to_string())),
+
+            '-' => {
+                // If the next char is also a '-' it is a comment. Skip until next line begins
+                if let Some(next) = self.chars.peek() {
+                    if *next == '-' {
+                        self.consume_until('\n');
+                        Ok(TokenType::NOP)
+                    } else {
+                        Ok(TokenType::Operator(c.to_string()))
+                    }
+                } else {
+                    Ok(TokenType::Operator(c.to_string()))
+                }
+            }
 
             // Strings
             '"' => Ok(self.parse_string()?),
@@ -302,6 +318,31 @@ impl<'a> Lexer<'a> {
             return self.transform_type(c);
         } else {
             Ok(TokenType::EOF)
+        }
+    }
+
+    pub fn peek_token(&mut self) -> Result<TokenType, LexerError> {
+        let _cp_offset = self.cp_offset;
+        let _cur_line = self.cur_line;
+        let _cur_col = self.cur_col;
+        let _open_punctuation = self.punctuation_state.clone();
+
+        let token = self.next_token();
+        self.cp_offset = _cp_offset;
+        self.cur_line = _cur_line;
+        self.cur_col = _cur_col;
+        self.punctuation_state = _open_punctuation;
+
+        Ok(token?)
+    }
+
+    pub fn consume_until(&mut self, pattern: char) {
+        while let Some(c) = self.chars.peek() {
+            if *c == pattern {
+                self.consume_char();
+                break;
+            }
+            self.consume_char();
         }
     }
 }
