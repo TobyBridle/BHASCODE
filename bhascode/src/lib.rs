@@ -20,3 +20,23 @@ macro_rules! main_program_warn {
         }
     };
 }
+
+// Generic Program Error
+#[macro_export]
+macro_rules! program_error {
+( $( $str: expr, $tag: expr ),* ) => {
+        {
+            eprintln!("\x1b[31;1m[{1}] Error: {0}\x1b[0;0m", $( $str, $tag),*);
+        }
+    };
+}
+
+// Generic Program Warn
+#[macro_export]
+macro_rules! program_warn {
+( $( $str: expr, $tag: expr ),* ) => {
+        {
+            eprintln!("\x1b[33;1m[{1}] Warn: {0}\x1b[0;0m", $( $str, $tag),*);
+        }
+    };
+}
