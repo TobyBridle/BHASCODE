@@ -95,7 +95,7 @@ impl<'a> Lexer<'a> {
                 None => {
                     return Err(LexerError::MissingExpectedSymbol {
                         expected: TokenType::Char('"'),
-                        found: TokenType::None,
+                        found: TokenType::String(buf),
                     })
                 }
             }
@@ -123,7 +123,6 @@ impl<'a> Lexer<'a> {
                         expected: TokenType::Char('\''),
                         found: TokenType::None,
                     };
-                    program_error!(err, "Lexer");
                     return Err(err);
                 }
             }
@@ -135,11 +134,6 @@ impl<'a> Lexer<'a> {
                 raw: buf,
                 hint: Hints::ExtraneousSymbol,
             };
-            // self.cur_col - 1 because we want to point to the start of the char literal
-            program_error!(
-                format!("{}:{} - {}", self.cur_line, self.cur_col - 1, err),
-                "Lexer"
-            );
             return Err(err);
         } else {
             // Convert buf to char (e.g "\n" -> '\n')

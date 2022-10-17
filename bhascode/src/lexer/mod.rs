@@ -7,10 +7,10 @@ pub enum LexerError {
     #[error("Error attempting to read file: {0}")]
     FileIO(#[from] std::io::Error),
 
-    #[error("Was expecting {expected:?}, found {found:?} instead.")]
+    #[error("Was expecting {expected:?}, found {found:#?} instead.")]
     MissingExpectedSymbol { expected: TokenType, found: Token },
 
-    #[error("Depth for Symbol {symbol:?} is already 0")]
+    #[error("{symbol:?} is missing a matching opening char")]
     MisbalancedSymbol { symbol: char, open: char },
 
     #[error("Found unknown symbol {symbol:?}")]
@@ -27,7 +27,7 @@ pub enum LexerError {
 }
 
 pub type Token = TokenType;
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum TokenType {
     // End of Token Stream
     EOF,
@@ -43,9 +43,10 @@ pub enum TokenType {
     Unknown(char), // Could also be read as unimplemented!
     Any,
     None,
+    NOP,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum PunctuationKind {
     // (
     Open(usize),
@@ -57,7 +58,7 @@ pub enum PunctuationKind {
     Seperator,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Hints {
     IntegerValue,
     FloatingPointValue,
