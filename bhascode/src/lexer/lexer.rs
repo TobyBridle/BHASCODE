@@ -13,7 +13,7 @@ impl<'a> Lexer<'a> {
 
     /// Maps a piece of punctuation to its matching symbol
     ///
-    /// * `c`:
+    /// * `c`: char
     fn map_punctuation(c: char) -> char {
         match c {
             '}' => '{',
@@ -28,7 +28,7 @@ impl<'a> Lexer<'a> {
 
     /// Increments the state of a given punctuation symbol
     ///
-    /// * `c`:
+    /// * `c`: char
     fn push_open_punctuation(&mut self, c: char) -> usize {
         if let Some(i) = self.punctuation_state.get_mut(&c) {
             *i += 1;
@@ -40,7 +40,7 @@ impl<'a> Lexer<'a> {
 
     /// Decrements the state of a given punctuation symbol
     ///
-    /// * `c`:
+    /// * `c`: char
     fn push_close_punctuation(&mut self, c: char) -> Result<usize, LexerError> {
         if let Some(i) = self.punctuation_state.get_mut(&Lexer::map_punctuation(c)) {
             if *i >= 1 {
@@ -60,6 +60,9 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// # Continues until a whitespace character or invalid var/keyword char is found (e.g $)
+    /// ## Places the characters into a buffer which is then placed inside a String token
+    /// * `c`: char
     fn parse_identifier(&mut self, c: char) -> Result<TokenType, LexerError> {
         let mut buf = String::new();
         buf.push(c);
@@ -78,6 +81,9 @@ impl<'a> Lexer<'a> {
             }
         }
     }
+
+    /// ## Places all characters into a String token buffer until a non-escaped double-quote is
+    /// found
     fn parse_string(&mut self) -> Result<TokenType, LexerError> {
         let mut buf = String::new();
         let mut has_found_escape = false;
@@ -102,6 +108,9 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// # Places all characters into a String token buffer until a non-escaped single-quote is found. #
+    /// ## If the ending buffer is longer than 1 char (with the exception of escape sequences) an
+    /// Err is returned
     fn parse_char(&mut self) -> Result<TokenType, LexerError> {
         // Buf until we find a single quote
         let mut buf = String::new();
@@ -155,7 +164,7 @@ impl<'a> Lexer<'a> {
 
     /// Iterates over a string and attmepts to parse a number
     ///
-    /// * `start`:
+    /// * `start`: char
     fn parse_number(&mut self, start: char) -> Result<TokenType, LexerError> {
         let mut seen_decimal_point = false;
         let mut seen_expression = false;
@@ -233,7 +242,7 @@ impl<'a> Lexer<'a> {
 
     /// Transform a generic character to the correct token
     ///
-    /// * `c`:
+    /// * `c`: char
     fn transform_type(&mut self, c: char) -> Result<TokenType, LexerError> {
         match c {
             // Punctuation
@@ -297,6 +306,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Skips all whitespace ascii characters
     fn skip_whitespace(&mut self) {
         while let Some(c) = self.chars.peek() {
             if !c.is_whitespace() {
@@ -306,6 +316,8 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// ## Consumes a character to begin the transformation of characters into tokens.
+    /// ### Stops if next token is EOF
     pub fn next_token(&mut self) -> Result<TokenType, LexerError> {
         self.skip_whitespace();
         if let Some(c) = self.consume_char() {
@@ -315,6 +327,8 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// ### Returns (peeks) the next token without permanently changing state of the lexer
+    /// ## Gets the next token, and then resets all of the offsets and lines to their previous states
     pub fn peek_token(&mut self) -> Result<TokenType, LexerError> {
         let _cp_offset = self.cp_offset;
         let _cur_line = self.cur_line;
@@ -330,6 +344,9 @@ impl<'a> Lexer<'a> {
         Ok(token?)
     }
 
+    /// ### Consumes all characters until the given character is found
+    ///
+    /// * `pattern`: char
     pub fn consume_until(&mut self, pattern: char) {
         while let Some(c) = self.chars.peek() {
             if *c == pattern {

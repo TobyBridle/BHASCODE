@@ -12,6 +12,7 @@ impl<'a> Parser<'_> {
         }
     }
 
+    /// ### Parses source by lexing each token one at a time and converting it to a Terminal
     pub fn parse(&mut self) -> Option<()> {
         // Iterate over tokens and parse them as either identifiers or terminals
         let mut token = self.lexer.next_token();
