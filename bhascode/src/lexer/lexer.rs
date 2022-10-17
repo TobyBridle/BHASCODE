@@ -1,4 +1,4 @@
-use crate::lexer::*;
+use crate::{lexer::*, program_error};
 
 impl<'a> Lexer<'a> {
     pub fn new(chars: &'a str) -> Lexer<'a> {
@@ -72,7 +72,7 @@ impl<'a> Lexer<'a> {
 
                 Some(c) if c.is_ascii_alphanumeric() || *c == '_' => {
                     buf.push(*c);
-                    self.chars.next();
+                    self.consume_char();
                 }
                 _ => break Ok(TokenType::Identifier(buf)),
             }
@@ -83,7 +83,7 @@ impl<'a> Lexer<'a> {
         let mut has_found_escape = false;
 
         loop {
-            match self.chars.next() {
+            match self.consume_char() {
                 Some('"') if !has_found_escape => return Ok(TokenType::String(buf)),
                 Some(c) if c == '\\' => {
                     has_found_escape = true;
@@ -99,6 +99,61 @@ impl<'a> Lexer<'a> {
                     })
                 }
             }
+        }
+    }
+
+    fn parse_char(&mut self) -> Result<TokenType, LexerError> {
+        // Buf until we find a single quote
+        let mut buf = String::new();
+        let mut has_found_escape = false;
+
+        loop {
+            let c = self.chars.next();
+            match c {
+                Some('\'') if !has_found_escape => break,
+                Some(c) if c == '\\' => {
+                    has_found_escape = true;
+                }
+                Some(c) => {
+                    buf.push(c);
+                    has_found_escape = false;
+                }
+                None => {
+                    let err = LexerError::MissingExpectedSymbol {
+                        expected: TokenType::Char('\''),
+                        found: TokenType::None,
+                    };
+                    program_error!(err, "Lexer");
+                    return Err(err);
+                }
+            }
+        }
+
+        let c = buf.chars().next();
+        if buf.len() > 1 && !has_found_escape {
+            let err = LexerError::CharLiteralError {
+                raw: buf,
+                hint: Hints::ExtraneousSymbol,
+            };
+            program_error!(
+                format!("{}:{} - {}", self.cur_line, self.cur_col, err),
+                "Lexer"
+            );
+            return Err(err);
+        } else {
+            // Convert buf to char (e.g "\n" -> '\n')
+            if c.is_none() {
+                let err = LexerError::CharLiteralError {
+                    raw: buf,
+                    hint: Hints::EmptyCharLiteral,
+                };
+                program_error!(
+                    format!("{}:{} - {}", self.cur_line, self.cur_col, err),
+                    "Lexer"
+                );
+                return Err(err);
+            }
+            return Ok(TokenType::Char(c.unwrap()));
         }
     }
 
@@ -206,6 +261,9 @@ impl<'a> Lexer<'a> {
 
             // Strings
             '"' => Ok(self.parse_string()?),
+
+            // Char
+            '\'' => Ok(self.parse_char()?),
 
             _ => Err(LexerError::UnknownSymbol {
                 symbol: (c.to_string()),

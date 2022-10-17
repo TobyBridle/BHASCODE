@@ -18,6 +18,12 @@ pub enum LexerError {
 
     #[error("Cannot create Numeric Literal due to invalid character {raw:?}")]
     NumericLiteralError { raw: String, hint: Hints },
+
+    #[error("Cannot create Character Literal '{raw}'. {hint}")]
+    CharLiteralError { raw: String, hint: Hints },
+
+    #[error("Invalid escape sequence '\\{c}'")]
+    InvalidEscapeSequence { c: char },
 }
 
 pub type Token = TokenType;
@@ -60,6 +66,21 @@ pub enum Hints {
     NoHint,
     ExtraneousSymbol,
     MissingExpectedSymbol,
+    EmptyCharLiteral,
+}
+
+impl std::fmt::Display for Hints {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Hints::IntegerValue => write!(f, "Integer Value"),
+            Hints::FloatingPointValue => write!(f, "Floating Point Value"),
+            Hints::String => write!(f, "String"),
+            Hints::NoHint => write!(f, "No Hint"),
+            Hints::ExtraneousSymbol => write!(f, "Extraneous Symbol"),
+            Hints::MissingExpectedSymbol => write!(f, "Missing Expected Symbol"),
+            Hints::EmptyCharLiteral => write!(f, "Character Literal is Empty"),
+        }
+    }
 }
 
 pub struct Lexer<'a> {
