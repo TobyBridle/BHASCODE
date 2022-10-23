@@ -20,7 +20,7 @@ foo x + 5 -- This would compile as (foo(x)) + 5
 foo(x + 5) -- This would compile as foo(x+5)
 ```
 
-_Things that I found useful whilst developing_
+_Things that I found useful whilst developing (in no particular order)_
 
 - [C syntax written in BNF (courtesy of University of Manchester)](http://www.cs.man.ac.uk/~pjj/bnf/c_syntax.bnf)
 - [The series on Compilers by Anita](https://www.youtube.com/channel/UCG-KXsLzjZMQaDBER5ddx0Q)
