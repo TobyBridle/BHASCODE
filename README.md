@@ -21,10 +21,11 @@ foo(x + 5) -- This would compile as foo(x+5)
 ```
 
 _Things that I found useful whilst developing_
-[C syntax written in BNF (courtesy of University of Manchester)](http://www.cs.man.ac.uk/~pjj/bnf/c_syntax.bnf)
-[The series on Compilers by Anita](https://www.youtube.com/channel/UCG-KXsLzjZMQaDBER5ddx0Q)
-[A series handouts and lectures for the compiler module at Stanford University](https://web.stanford.edu/class/archive/cs/cs143/cs143.1128/)
-[Context-free Grammars](https://en.wikipedia.org/wiki/Context-free_grammar)
-[Extended Backus-Naur Form](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form)
-[This series by "Chonky Raccoon Coding" on creating a lexer and parser in Rust](https://www.youtube.com/channel/UCl_rCpOUXYvSEzfK5qyJxJQ)
-[Python EBNF](https://docs.python.org/3/reference/grammar.html)
+
+- [C syntax written in BNF (courtesy of University of Manchester)](http://www.cs.man.ac.uk/~pjj/bnf/c_syntax.bnf)
+- [The series on Compilers by Anita](https://www.youtube.com/channel/UCG-KXsLzjZMQaDBER5ddx0Q)
+- [A series handouts and lectures for the compiler module at Stanford University](https://web.stanford.edu/class/archive/cs/cs143/cs143.1128/)
+- [Context-free Grammars](https://en.wikipedia.org/wiki/Context-free_grammar)
+- [Extended Backus-Naur Form](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form)
+- [This series by "Chonky Raccoon Coding" on creating a lexer and parser in Rust](https://www.youtube.com/channel/UCl_rCpOUXYvSEzfK5qyJxJQ)
+- [Python EBNF](https://docs.python.org/3/reference/grammar.html)
