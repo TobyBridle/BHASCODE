@@ -94,6 +94,11 @@ impl<'a> Lexer<'a> {
                 Some(c) if c == '\\' => {
                     has_found_escape = true;
                 }
+                Some(c) if c == '\n' => {
+                    return Err(LexerError::UnexpectedTermination {
+                        found: TokenType::String(format!("{}\n", buf)),
+                    });
+                }
                 Some(c) => {
                     buf.push(c);
                     has_found_escape = false;

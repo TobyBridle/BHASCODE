@@ -7,7 +7,7 @@ pub enum LexerError {
     #[error("Error attempting to read file: {0}")]
     FileIO(#[from] std::io::Error),
 
-    #[error("Was expecting {expected:?}, found {found:#?} instead.")]
+    #[error("Was expecting {expected:?}, found {found:?} instead.")]
     MissingExpectedSymbol { expected: TokenType, found: Token },
 
     #[error("{symbol:?} is missing a matching opening char")]
@@ -24,6 +24,9 @@ pub enum LexerError {
 
     #[error("Invalid escape sequence '\\{c}'")]
     InvalidEscapeSequence { c: char },
+
+    #[error("Unexpected Termination of Line {found:?}")]
+    UnexpectedTermination { found: Token },
 }
 
 pub type Token = TokenType;

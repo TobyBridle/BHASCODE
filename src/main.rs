@@ -40,13 +40,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ));
     }
 
-    let mut lexer = Lexer::new(&src);
-    loop {
-        match lexer.next_token() {
-            Ok(TokenType::EOF) => break,
-            Ok(tok) => println!("{:?}", tok),
-            Err(e) => println!("{:?}", e),
-        }
-    }
+    let mut parser = Parser::new(&src);
+    parser.parse();
+
+    // Recurse errors (if any) and print using macro
+    parser.errors.iter().for_each(|err| {
+        program_error!(format!("{}", err), "Parser");
+    });
+
     Ok(())
 }
