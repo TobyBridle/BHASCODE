@@ -2,10 +2,11 @@ extern crate bhascode;
 use std::io::Read;
 
 use bhascode::*;
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Read file from cli args e.g (./main --src=examples/hello_world.psc) or simply (./main
-    // examples/hello_world.psc)
-    let file_handle = std::env::args().nth(1);
+
+fn load_file(
+    ref file_handle: Option<String>,
+) -> Result<(std::fs::File, String), Box<dyn std::error::Error>> {
+    // let file_handle = std::env::args().nth(1);
     if file_handle.is_none() {
         main_program_err!("No source file provided");
         return Err(Box::new(std::io::Error::new(
@@ -15,7 +16,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Unwrap the file handle as we now know it exists
-    let ref file_handle = file_handle.unwrap();
+    let ref file_handle = file_handle.as_ref().unwrap();
 
     let file = std::fs::File::open(file_handle);
     if file.is_err() {
@@ -29,8 +30,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )));
     }
 
+    Ok((file.unwrap(), file_handle.to_string()))
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Read file from cli args e.g (./main --src=examples/hello_world.psc) or simply (./main
+    // examples/hello_world.psc)
+
+    let (mut file, file_handle) = load_file(std::env::args().nth(1))?;
+
     let mut src = String::new();
-    let _ = file.unwrap().read_to_string(&mut src); // Result stored in temporary var
+    let _ = file.read_to_string(&mut src); // Result stored in temporary var
 
     // Warn the user that the file is empty
     if src.is_empty() {
