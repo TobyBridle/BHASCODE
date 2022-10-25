@@ -335,16 +335,20 @@ impl<'a> Lexer<'a> {
     /// ### Returns (peeks) the next token without permanently changing state of the lexer
     /// ## Gets the next token, and then resets all of the offsets and lines to their previous states
     pub fn peek_token(&mut self) -> Result<TokenType, LexerError> {
-        let _cp_offset = self.cp_offset;
-        let _cur_line = self.cur_line;
+        // Grab next token without permanently altering state of the lexer
         let _cur_col = self.cur_col;
-        let _open_punctuation = self.punctuation_state.clone();
+        let _cur_line = self.cur_line;
+        let _cp_offset = self.cp_offset;
+        let _punctuation_state = self.punctuation_state.clone();
+        let _chars = self.chars.clone();
 
         let token = self.next_token();
-        self.cp_offset = _cp_offset;
-        self.cur_line = _cur_line;
+
         self.cur_col = _cur_col;
-        self.punctuation_state = _open_punctuation;
+        self.cur_line = _cur_line;
+        self.cp_offset = _cp_offset;
+        self.punctuation_state = _punctuation_state;
+        self.chars = _chars;
 
         Ok(token?)
     }
