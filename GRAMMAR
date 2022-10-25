@@ -1,0 +1,35 @@
+# This grammar is a mix of EBNF and the notation shown on the Wikipedia page for CFGs
+# This is the first draft, there may be some issues with the grammar and it may not even be possible to parse using LR(1)
+
+type -> "int" | "string" | "float" ;
+identifier -> ? a-Z ? | "_" + { identifier | digit } ;
+
+number -> ["-"] + ( digit | ( { digit } | ["."] + { digit } ) ) ;
+digit -> "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+string -> '"' + ( { ? ASCII CHAR ? } | ? ASCII CHAR? ) + '"' ;
+char -> ? SINGLE QUOTE ? + ? ASCII CHAR ? + ? SINGLE QUOTE ?;
+
+function_call -> identifier + [ "(" ] + [ expression ] + [ ")" ] ; ## This one is a recursive definition 
+expression -> [ "+" | "-" ] + term + { ( "+" | "-" ) + term } ;
+term -> factor + { ( "*" | "/" ) + factor } ;
+factor -> identifier
+        | number
+        | string
+        | statement
+        | "(" + expression + ")"
+        ;
+
+statement -> declaration
+            | if_statement
+            | while_statement
+            | function_call
+            | { statement }
+            ;
+
+if_statement -> "IF" + "(" + condition + ")" + "THEN" + ? NEWLINE ? + statement + ? NEWLINE ? + ( [ "else" + statement ] | "ENDIF" ) ;
+for_statement -> "FOR" + "(" + declaration + "TO" + expression + ")" + "DO" + ? NEWLINE ? + statement + "ENDREPEAT" ;
+while_statement -> "WHILE" + "(" + condition + ")" + "DO" + ? NEWLINE ? + statement + ? NEWLINE ? + "ENDWHILE" ;
+
+condition -> expression + ( "==" | ">" | "<" | ">="  | "<=" ) + expression ;
+
+function_declaration -> "FUNCTION" + identifier + "(" + [ identifier ] + ")" + ? NEWLINE ? + statement + ? NEWLINE ? + "ENDFUNCTION" ;
