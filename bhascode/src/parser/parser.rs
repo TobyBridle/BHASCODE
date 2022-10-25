@@ -32,6 +32,10 @@ impl<'a> Parser<'_> {
                 _ => {}
             }
 
+            if *token.as_ref().unwrap() != TokenType::NOP {
+                self.tokens.push(token.unwrap());
+            }
+
             // match token {
             //     Ok(TokenType::Identifier(ident)) => {
             //         // Parse as identifier

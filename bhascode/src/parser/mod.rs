@@ -35,7 +35,7 @@ pub enum Terminal {
 
 pub struct Parser<'a> {
     _src: &'a str,
-    tokens: Vec<crate::Terminal>,
+    pub tokens: Vec<crate::Token>,
     expect: Vec<crate::Terminal>,
     pub errors: Vec<ParserError>,
     lexer: crate::lexer::Lexer<'a>,

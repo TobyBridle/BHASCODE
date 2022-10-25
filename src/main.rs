@@ -53,6 +53,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut parser = Parser::new(&src);
     parser.parse();
 
+    // Print all of the tokens that were found
+    parser.tokens.iter().for_each(|token| {
+        println!("{:?}", token);
+    });
+
     // Recurse errors (if any) and print using macro
     parser.errors.iter().for_each(|err| {
         program_error!(format!("{}", err), "Parser");

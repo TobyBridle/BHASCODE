@@ -52,3 +52,18 @@ macro_rules! program_success {
         }
     };
 }
+
+// Take a string and mutable reference to a Vector
+// Create a new instance of a lexer and push each token onto the Vector
+#[macro_export]
+macro_rules! lexer_get_tokens {
+    ($src: expr, $tokens: expr, $lexer: expr) => {
+        $lexer = Lexer::new($src);
+        while let Ok(token) = $lexer.next_token() {
+            if token == TokenType::EOF {
+                break;
+            }
+            $tokens.push(token);
+        }
+    };
+}
