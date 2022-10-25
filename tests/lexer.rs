@@ -93,4 +93,17 @@ mod test {
         assert_eq!(tokens, correct_tokens);
         tokens.clear();
     }
+
+    // Ensure that the state of the lexer does not get permanently altered by the functoin call
+    #[test]
+    pub fn test_lookahead_state() {
+        let mut lexer = Lexer::new("int x = 5");
+        let mut lexer_clone = Lexer::new("int x = 5");
+
+        let peeked = lexer.peek_token().unwrap();
+        let next_token = lexer.next_token().unwrap();
+
+        assert_eq!(next_token, lexer_clone.next_token().unwrap());
+        assert_eq!(peeked, next_token);
+    }
 }
