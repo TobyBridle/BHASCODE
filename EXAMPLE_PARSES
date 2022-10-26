@@ -1,0 +1,32 @@
+## FOR LOOP
+```
+FOR int i = 0 TO 10 DO
+    PRINT i
+ENDREPEAT
+```
+
+Parsing this program would be done by the following steps:
+1.  FOR, i, =, 0, TO, 10, DO, Char('\n'), PRINT, i, Char('\n'), ENDREPEAT,
+2.  FOR, Identifier(i), Operator("="), Numeric(0, Integer), TO, Numeric(10, Integer), DO, Char('\n'), PRINT, Identifier(i), Char('\n'), ENDREPEAT
+2.  FOR, declaration, TO, number, DO, Char('\n'), function_call, Char('\n'), ENDREPEAT
+3.  FOR, declaration, TO, factor, DO, Char('\n'), statement, Char('\n'), ENDREPEAT
+4.  FOR, declaration, TO, term, DO, Char('\n'), statement, Char('\n'), ENDREPEAT
+4.  FOR, declaration, TO, expression, DO, Char('\n'), statement, Char('\n'), ENDREPEAT
+5.  for_statement
+
+## IF STATEMENT
+```
+int x = 5
+IF x == 5 THEN
+    PRINT "x is 5"
+ELSE
+    PRINT "x is not 5"
+ENDIF
+```
+
+Parsing this program would be done by the following steps:
+1. Identifier("int"), Identifier("x"), Operator("="), Numeric(5, Integer), Char('\n'), IF, Identifier("x"), Operator("=="), Numeric(5, Integer), THEN, Char('\n'), PRINT, String("x is 5"), Char('\n'), ELSE, Char('\n'), PRINT, String("x is not 5"), Char('\n'), ENDIF
+2. declaration, Char('\n'), IF, Factor("x"), Operator("=="), Factor("5"), THEN, Char('\n'), function_call, Char('\n'), ELSE, function_call, Char('\n'), ENDIF
+3. declaration, Char('\n'), IF, expression, Operator("=="), expression, THEN, Char('\n'), statement, Char('\n'), ELSE, statement, Char('\n'), ENDIF
+4. declaration, Char('\n'), IF, condition, THEN, Char('\n'), statement, Char('\n'), ELSE, statement, Char('\n'), ENDIF
+5. declaration, if_statement
