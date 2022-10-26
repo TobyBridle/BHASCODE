@@ -1,6 +1,6 @@
 // Import lexer_get_tokens macro
 #[cfg(test)]
-mod test {
+mod lexer_tests {
     use bhascode::*;
     #[test]
     pub fn test_decl() {
