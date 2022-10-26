@@ -3,6 +3,11 @@ use std::io::Read;
 
 use bhascode::*;
 
+/// # Parse the file handle and retrieve the data of the file.
+/// File handle can be passed using `--src=<FILE>` or by passing as the first argument to the program
+/// (e.g ./main `<FILE>`)
+///
+/// * `args`:
 fn load_file(args: std::env::Args) -> Result<(std::fs::File, String), Box<dyn std::error::Error>> {
     if args.len() == 0 {
         main_program_err!("No source file provided");
@@ -56,7 +61,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (mut file, file_handle) = load_file(std::env::args())?;
 
     let mut src = String::new();
-    let _ = file.read_to_string(&mut src); // Result stored in temporary var
+    let _ = file.read_to_string(&mut src);
 
     // Warn the user that the file is empty
     if src.is_empty() {

@@ -15,20 +15,22 @@ term -> factor + { ( "*" | "/" ) + factor } ;
 factor -> identifier
         | number
         | string
-        | statement
         | "(" + expression + ")"
         ;
 
 statement -> declaration
             | if_statement
+            | for_statement
             | while_statement
             | function_call
             | { statement }
             ;
 
-if_statement -> "IF" + "(" + condition + ")" + "THEN" + ? NEWLINE ? + statement + ? NEWLINE ? + ( [ "else" + statement ] | "ENDIF" ) ;
-for_statement -> "FOR" + "(" + declaration + "TO" + expression + ")" + "DO" + ? NEWLINE ? + statement + "ENDREPEAT" ;
-while_statement -> "WHILE" + "(" + condition + ")" + "DO" + ? NEWLINE ? + statement + ? NEWLINE ? + "ENDREPEAT" ;
+declaration -> type + identifier  "=" + expression ;
+
+if_statement -> "IF" + condition + "THEN" + ? NEWLINE ? + statement + ? NEWLINE ? + ( [ "else" + statement ] | "ENDIF" ) ;
+for_statement -> "FOR" declaration + "TO" + expression + "DO" + ? NEWLINE ? + statement + "ENDREPEAT" ;
+while_statement -> "WHILE" + condition + "DO" + ? NEWLINE ? + statement + ? NEWLINE ? + "ENDREPEAT" ;
 
 condition -> expression + ( "==" | ">" | "<" | ">="  | "<=" ) + expression ;
 
