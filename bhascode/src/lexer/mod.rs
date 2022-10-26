@@ -98,3 +98,23 @@ pub struct Lexer<'a> {
     chars: std::iter::Peekable<std::str::Chars<'a>>,
     punctuation_state: std::collections::HashMap<char, usize>,
 }
+
+impl std::fmt::Display for TokenType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TokenType::EOF => write!(f, "EOF"),
+            TokenType::Punctuation { raw, kind } => {
+                write!(f, "Punctuation: {} ({:?})", raw, kind)
+            }
+            TokenType::Operator(s) => write!(f, "Operator: {}", s),
+            TokenType::Identifier(s) => write!(f, "Identifier: {}", s),
+            TokenType::String(s) => write!(f, "String: {}", s),
+            TokenType::Char(c) => write!(f, "Char: {}", c),
+            TokenType::Numeric { raw, hint } => write!(f, "Numeric: {} ({:?})", raw, hint),
+            TokenType::Unknown(c) => write!(f, "Unknown: {}", c),
+            TokenType::Any => write!(f, "Any"),
+            TokenType::None => write!(f, "None"),
+            TokenType::NOP => write!(f, "NOP"),
+        }
+    }
+}
