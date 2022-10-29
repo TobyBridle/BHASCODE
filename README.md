@@ -29,3 +29,4 @@ _Things that I found useful whilst developing (in no particular order)_
 - [Extended Backus-Naur Form](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form)
 - [This series by "Chonky Raccoon Coding" on creating a lexer and parser in Rust](https://www.youtube.com/channel/UCl_rCpOUXYvSEzfK5qyJxJQ)
 - [Python EBNF](https://docs.python.org/3/reference/grammar.html)
+- [Implementation of an LALR(1) Parser Generator](https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6519&context=theses)
