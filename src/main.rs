@@ -1,5 +1,8 @@
 extern crate bhascode;
+use std::fs::File;
 use std::io::Read;
+use std::io::Write;
+use std::time;
 
 use bhascode::*;
 
@@ -21,7 +24,6 @@ fn load_file(args: std::env::Args) -> Result<(std::fs::File, String), Box<dyn st
     // If it was passed as --src=<FILE> then we need to find the index of the parameter and use
     // that
     // If it was not passed like that, we can assume the first arg as the file handle
-
     let mut file_handle = String::new();
     let mut fallback_handle = String::new();
     args.enumerate().for_each(|(i, arg)| {
@@ -36,7 +38,31 @@ fn load_file(args: std::env::Args) -> Result<(std::fs::File, String), Box<dyn st
     });
 
     if file_handle.is_empty() {
-        file_handle = fallback_handle;
+        // We want to check if the fallback_handle is a string rather than a file handle
+        // It may be that the user wants to parse the string rather than a file.
+        if (fallback_handle.starts_with('"') && fallback_handle.ends_with('"'))
+            || (fallback_handle.starts_with('\'') && fallback_handle.ends_with('\''))
+        {
+            // Create virtual file with the data inside the string and file_handle of "Inline
+            // Program"
+            // The type of File must be std::fs::File
+            // Create a unique file name using the time
+            let time = time::SystemTime::now()
+                .duration_since(time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            // Set an environment variable to the file name
+            std::env::set_var("BHASCODE_TEMP_FILE", format!("inline_program_{}.psc", time));
+            let mut file = File::create(format!("inline_program_{}.psc", time))?;
+            // Write data asynchronously without quotes
+            file.write_all(fallback_handle[1..fallback_handle.len() - 1].as_bytes())?;
+            // Close the file
+            std::mem::drop(file);
+            file = File::open(format!("inline_program_{}.psc", time))?;
+            return Ok((file, "Inline Program".to_string()));
+        } else {
+            file_handle = fallback_handle;
+        }
     }
 
     let file = std::fs::File::open(file_handle.clone());
@@ -83,6 +109,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     parser.errors.iter().for_each(|err| {
         program_error!(format!("{}", err), "Parser");
     });
+
+    // Delete the virtual file if it was created
+    if std::env::var("BHASCODE_TEMP_FILE").is_ok() {
+        std::fs::remove_file(std::env::var("BHASCODE_TEMP_FILE").unwrap())?;
+    }
 
     Ok(())
 }
