@@ -24,7 +24,7 @@ use crate::token;
 
 pub type TokenResult = Result<Token, String>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Token {
     pub token: TokenType,
     pub value: String,
@@ -36,7 +36,7 @@ impl Token {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TokenType {
     // We do not handle keywords at this stage, so we can just use a generic identifier token for all keywords.
     IDENTIFIER,
@@ -48,11 +48,15 @@ pub enum TokenType {
     // This means that at this stage, we are not sure whether the value is an integer or a float.
     NUMERIC,
 
+    // The types of braces are not important for the parser, so we can just use a generic brace token.
+    BRACE,
+
     // All unknown tokens are stored under the generic unknown token.
     UNKNOWN,
 
-    // The end of file token is used to indicate that the lexer has reached the end of the file.
-    EOF,
+    // NOP is a special token that is used when the lexer has scanned
+    // something that is not a useful token, but also not an error.
+    NOP,
 }
 
 /*
@@ -75,4 +79,14 @@ pub struct Lexer<'a> {
 
     line: usize,
     column: usize,
+
+    // We can use a stack to store the braces that we have opened.
+    // This will allow us to check if the braces are balanced.
+    // If we find a closing brace, we can pop the last brace from the stack.
+    // If the stack is empty, then we know that we have an unbalanced brace.
+    // If the stack is not empty, then we can check if the brace that we have found matches the last brace in the stack.
+    // If the braces do not match, then we know that we have an unbalanced brace.
+    // If the braces do match, then we can pop the last brace from the stack.
+    braces_balancer: Vec<char>,
+    
 }
