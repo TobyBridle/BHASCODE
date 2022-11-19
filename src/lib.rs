@@ -37,9 +37,14 @@ LIST OF IMPLEMENTED MACROS:
 - Check if the token(s) are as expected.
     check_tokens!(lexer, expected_tokens)
 
+- Shorthand for consuming tokens using a closure
+    consume!(lexer, token_vec, closure)
+    EXAMPLE USAGE:
+        // This will consume all tokens that are not NOP.
+        consume!(lexer, token_vec, |token| token.token != TokenType::NOP)
+
 - Shorthand for creating a token using a type and a &str value
     token!(token_type, token_value)
-
 */
 
 #[macro_export]
@@ -47,8 +52,23 @@ macro_rules! check_tokens {
     ($lexer:expr, $($expected:expr),+) => {
         $(
             let token = $lexer.next().unwrap().unwrap();
-            assert_eq!(token, $expected);
+            // Check if the found token is NOP
+            if token.token != TokenType::NOP {
+                println!("{:?}", token);
+                assert_eq!(token, $expected);
+            }
         )+
+    };
+}
+
+#[macro_export]
+macro_rules! consume {
+    ($lexer:expr, $tokens:expr, $closure:expr) => {
+        for token in $lexer {
+            if $closure(token.clone().unwrap()) {
+                $tokens.push(token.unwrap());
+            }
+        }
     };
 }
 
