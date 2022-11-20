@@ -75,7 +75,6 @@ The lexer will be implemented as an iterator. This means that we can use the `fo
 pub struct Lexer<'a> {
 
     input: std::str::Chars<'a>,
-    codepoint: usize,
 
     line: usize,
     column: usize,

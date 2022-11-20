@@ -1,4 +1,4 @@
-use std::char;
+use std::borrow::Borrow;
 
 use crate::lexer::*;
 
@@ -6,14 +6,7 @@ impl<'a> Iterator for Lexer<'a> {
     type Item = TokenResult;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(character) = self.input.next() {
-            // We need to skip the whitespace & comments
-            if character.is_whitespace() {
-                self.codepoint += 1;
-                self.input.next();
-                return self.next();
-            }
-
+        if let Some(character) = self.skip_to_next_char() {
             match character {
 
                 // If the character is an open brace, we can give it a unique id.
@@ -50,7 +43,6 @@ impl<'a> Iterator for Lexer<'a> {
         let input_str = self.input.as_str();
         Lexer {
             input: input_str.chars(),
-            codepoint: self.codepoint,
             
             line: self.line,
             column: self.column,
@@ -64,13 +56,23 @@ impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Self {
         Self {
             input: input.chars(),
-            codepoint: 0,
             
             line: 1,
             column: 1,
 
             braces_balancer: Vec::new(),
         }
+    }
+
+    pub fn skip_to_next_char(&mut self) -> Option<char>{
+        while let Some(character) = self.input.by_ref().peekable().peek() {
+            if !character.is_whitespace() {
+                return Some(*character);
+            } else {
+                return self.input.next();
+            }
+        }
+        None
     }
 
     pub fn peek(&mut self) -> Option<TokenResult> {
@@ -80,7 +82,6 @@ impl<'a> Lexer<'a> {
         
         let mut lexer = Lexer {
             input: self.input.as_str().chars(),
-            codepoint: self.codepoint,
             
             line: self.line,
             column: self.column,
@@ -91,13 +92,11 @@ impl<'a> Lexer<'a> {
     }
 
     fn lex_open_brace(&mut self, character: char) -> TokenResult {
-        self.codepoint += 1;
         self.braces_balancer.push(character);
         Ok(token!(BRACE, character))
     }
 
     fn lex_close_brace(&mut self, character: char) -> TokenResult {
-        self.codepoint += 1;
         // We want to check if the close brace matches the corresponding open brace.
         // We need to peek at the stack (braces_balancer) to see if the last open brace is the same as the current close brace.
         // If it is, then we can pop the last open brace from the stack.
@@ -126,20 +125,19 @@ impl<'a> Lexer<'a> {
         let mut operator = character.to_string();
 
         // We need to check if the next character is also an operator.
-        // If it is, then we need to add it to the operator string.
-        if let Some(next_character) = self.input.next() {
-            if next_character.is_whitespace() {
-                self.codepoint += 1;
-                return Ok(token!(OPERATOR, operator));
-            }
+        // If it is, it may be a double operator (e.g. `==`).
+        // It may just be two single operators (e.g `+-` is `+` and `-`).
 
+        if let Some(next_character) = self.input.to_owned().peekable().peek() {
+            let next_character = *next_character;
             match next_character {
-                '+' | '-' | '*' | '/' | '=' | '<' | '>' | '!' | '&' | '|' => {
+                // If the next character is the same as the current, or it is an `=`, we can push it
+                // onto the operator string and return the operator as a token.
+                next_character if next_character == character || next_character == '=' => {
                     operator.push(next_character);
-                }
-                _ => {
-                    return Ok(token!(OPERATOR, operator))
-                }
+                    self.input.next();
+                },
+                _ => return Ok(token!(OPERATOR, operator)),
             }
         }
 

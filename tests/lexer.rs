@@ -55,6 +55,51 @@ mod lexer_tests {
     }
 
     #[test]
+    fn test_lexer_operators() {
+        let mut lexer_double_operator = Lexer::new("++\n--\n&&\n||\n==\n!=\n<=\n>=\n+=\n-=\n*=\n/=\n++--&&||==!=<=>=+=-=*=/=");
+        check_tokens!(
+            lexer_double_operator,
+            token!(OPERATOR, "++"),
+            token!(OPERATOR, "--"),
+            token!(OPERATOR, "&&"),
+            token!(OPERATOR, "||"),
+            token!(OPERATOR, "=="),
+            token!(OPERATOR, "!="),
+            token!(OPERATOR, "<="),
+            token!(OPERATOR, ">="),
+            token!(OPERATOR, "+="),
+            token!(OPERATOR, "-="),
+            token!(OPERATOR, "*="),
+            token!(OPERATOR, "/="),
+            token!(OPERATOR, "++"),
+            token!(OPERATOR, "--"),
+            token!(OPERATOR, "&&"),
+            token!(OPERATOR, "||"),
+            token!(OPERATOR, "=="),
+            token!(OPERATOR, "!="),
+            token!(OPERATOR, "<="),
+            token!(OPERATOR, ">="),
+            token!(OPERATOR, "+="),
+            token!(OPERATOR, "-="),
+            token!(OPERATOR, "*="),
+            token!(OPERATOR, "/=")
+            );
+
+        let mut lexer_single_operator = Lexer::new("+\n-\n*\n/\n+-*/");
+        check_tokens!(
+            lexer_single_operator,
+            token!(OPERATOR, "+"),
+            token!(OPERATOR, "-"),
+            token!(OPERATOR, "*"),
+            token!(OPERATOR, "/"),
+            token!(OPERATOR, "+"),
+            token!(OPERATOR, "-"),
+            token!(OPERATOR, "*"),
+            token!(OPERATOR, "/")
+        );
+    }
+
+    #[test]
     fn test_lexer_invalid_token() {
         let mut lexer_invalid_ident = Lexer::new("int$$x = 10 + 20");
         // It should throw an error for the invalid token.
