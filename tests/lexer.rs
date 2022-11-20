@@ -8,10 +8,9 @@ THINGS THAT MUST BE TESTED:
 - v. The lexer must be able to finish lexing the file and return an EOF token.
 */
 
-
 #[cfg(test)]
 mod lexer_tests {
-    use rust_compiler::{Token, TokenType, Lexer, token, check_tokens, consume, TokenResult};
+    use rust_compiler::{check_tokens, consume, token, Lexer, Token, TokenType};
 
     #[test]
     fn test_lexer_single_token() {
@@ -20,7 +19,7 @@ mod lexer_tests {
 
         let mut lexer_float = Lexer::new("123.456");
         check_tokens!(lexer_float, token!(NUMERIC, "123.456"));
-        
+
         let mut lexer_operator = Lexer::new("+");
         check_tokens!(lexer_operator, token!(OPERATOR, "+"));
 
@@ -37,7 +36,6 @@ mod lexer_tests {
 
         let mut lexer_identifier = Lexer::new("abc");
         check_tokens!(lexer_identifier, token!(IDENTIFIER, "abc"));
-
     }
 
     #[test]
@@ -45,7 +43,7 @@ mod lexer_tests {
         let mut lexer = Lexer::new("int x = 10 + 20");
         check_tokens!(
             lexer,
-            token!(IDENTIFIER, "int"),
+            token!(KEYWORD, "int"),
             token!(IDENTIFIER, "x"),
             token!(OPERATOR, "="),
             token!(NUMERIC, "10"),
@@ -56,7 +54,8 @@ mod lexer_tests {
 
     #[test]
     fn test_lexer_operators() {
-        let mut lexer_double_operator = Lexer::new("++\n--\n&&\n||\n==\n!=\n<=\n>=\n+=\n-=\n*=\n/=\n++--&&||==!=<=>=+=-=*=/=");
+        let mut lexer_double_operator =
+            Lexer::new("++\n--\n&&\n||\n==\n!=\n<=\n>=\n+=\n-=\n*=\n/=\n++--&&||==!=<=>=+=-=*=/=");
         check_tokens!(
             lexer_double_operator,
             token!(OPERATOR, "++"),
@@ -83,7 +82,7 @@ mod lexer_tests {
             token!(OPERATOR, "-="),
             token!(OPERATOR, "*="),
             token!(OPERATOR, "/=")
-            );
+        );
 
         let mut lexer_single_operator = Lexer::new("+\n-\n*\n/\n+-*/");
         check_tokens!(
@@ -106,7 +105,7 @@ mod lexer_tests {
         assert!(lexer_invalid_ident.next().unwrap().is_err());
 
         let mut lexer_invalid_brace = Lexer::new("{}[])]}");
-        
+
         // It should throw an error for the invalid token.
         // Skip the first 4 tokens because they are valid.
         for _ in 0..4 {
@@ -114,15 +113,18 @@ mod lexer_tests {
         }
 
         assert!(lexer_invalid_brace.next().unwrap().is_err());
-        
+
+        // Check that variable names can't start with a number.
+        let mut lexer_ident_with_number = Lexer::new("int 1x = 10 + 20");
+        assert!(lexer_ident_with_number.nth(1).unwrap().is_err());
     }
 
     #[test]
     fn test_lexer_peek() {
         let mut lexer = Lexer::new("int x = 10 + 20");
-        assert_eq!(lexer.peek().unwrap().unwrap().token, TokenType::IDENTIFIER);
-        assert_eq!(lexer.peek().unwrap().unwrap().token, TokenType::IDENTIFIER);
-        assert_eq!(lexer.next().unwrap().unwrap().token, TokenType::IDENTIFIER);
+        assert_eq!(lexer.peek().unwrap().unwrap().token, TokenType::KEYWORD);
+        assert_eq!(lexer.peek().unwrap().unwrap().token, TokenType::KEYWORD);
+        assert_eq!(lexer.next().unwrap().unwrap().token, TokenType::KEYWORD);
         assert_eq!(lexer.peek().unwrap().unwrap().token, TokenType::IDENTIFIER);
         assert_eq!(lexer.next().unwrap().unwrap().token, TokenType::IDENTIFIER);
         assert_eq!(lexer.peek().unwrap().unwrap().token, TokenType::OPERATOR);
@@ -159,7 +161,6 @@ mod lexer_tests {
     fn test_lexer_eof_with_whitespace() {
         let mut lexer = Lexer::new(" ");
         assert!(lexer.next().is_none());
-
     }
 
     #[test]
@@ -167,17 +168,70 @@ mod lexer_tests {
         let mut lexer_single_line = Lexer::new("# This is a single-line comment\nint x = 5");
         // Create vector that can be passed to consume! macro
         let mut tokens: Vec<Token> = Vec::new();
-        consume!(lexer_single_line, tokens, |tok: Token| tok.token != TokenType::NOP);
+        consume!(lexer_single_line, tokens, |tok: Token| tok.token
+            != TokenType::NOP);
         assert_eq!(tokens.len(), 4);
 
         let mut lexer_multi_line = Lexer::new("#- This is a multi-line comment\n int x = 5 -#");
         tokens.clear();
-        consume!(lexer_multi_line, tokens, |tok: Token| tok.token != TokenType::NOP);
+        consume!(lexer_multi_line, tokens, |tok: Token| tok.token
+            != TokenType::NOP);
         assert_eq!(tokens.len(), 0);
 
-        let mut lexer_multi_line_with_tokens = Lexer::new("#- This is a multi-line comment\n int x = 5 -# int y = 10");
+        let mut lexer_multi_line_with_tokens =
+            Lexer::new("#- This is a multi-line comment\n int x = 5 -# int y = 10");
         tokens.clear();
-        consume!(lexer_multi_line_with_tokens, tokens, |tok: Token| tok.token != TokenType::NOP);
+        consume!(lexer_multi_line_with_tokens, tokens, |tok: Token| tok.token
+            != TokenType::NOP);
         assert_eq!(tokens.len(), 4);
+
+        let mut lexer_multi_line_unterminated =
+            Lexer::new("#- This is a multi-line comment\n int x = 5");
+        tokens.clear();
+        assert!(lexer_multi_line_unterminated.next().unwrap().is_err());
+
+        let mut lexer_multi_line_unterminated_with_tokens = Lexer::new("int y = 10 # This stuff should still be registered\n#- This is a multi-line comment\n int x = 5 int y = 10");
+        tokens.clear();
+        // The first 4 tokens should be valid.
+        for _ in 0..4 {
+            println!(
+                "{:?}",
+                lexer_multi_line_unterminated_with_tokens
+                    .next()
+                    .unwrap()
+                    .unwrap()
+            );
+        }
+
+        // The next token should still be fine as it is a single-line comment
+        assert!(lexer_multi_line_unterminated_with_tokens
+            .next()
+            .unwrap()
+            .is_ok());
+
+        // The next token should be an error as it is an unterminated multi-line comment
+        assert!(lexer_multi_line_unterminated_with_tokens
+            .next()
+            .unwrap()
+            .is_err());
+    }
+
+    #[test]
+    fn test_lexer_string() {
+        let mut lexer = Lexer::new("\"Hello World\"");
+        check_tokens!(lexer, token!(STRING, "Hello World"));
+    }
+
+    #[test]
+    fn test_lexer_string_with_escape() {
+        // Test that having `\\` and other escapes such as `\n` work.
+        let mut lexer = Lexer::new("\"Hello \\\"World\\\"\"");
+        check_tokens!(lexer, token!(STRING, "Hello \"World\""));
+    }
+
+    #[test]
+    fn test_lexer_string_with_other_chars() {
+        let mut lexer = Lexer::new("\"int x = 5\nHello World!\"");
+        check_tokens!(lexer, token!(STRING, "int x = 5\nHello World!"));
     }
 }

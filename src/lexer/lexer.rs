@@ -1,6 +1,5 @@
-use std::borrow::Borrow;
-
 use crate::lexer::*;
+use crate::token_from_keyword;
 
 impl<'a> Iterator for Lexer<'a> {
     type Item = TokenResult;
@@ -8,7 +7,6 @@ impl<'a> Iterator for Lexer<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(character) = self.skip_to_next_char() {
             match character {
-
                 // If the character is an open brace, we can give it a unique id.
                 // We can then check if there is a corresponding close brace.
                 // If not, then we can throw an error before we even start parsing.
@@ -19,11 +17,18 @@ impl<'a> Iterator for Lexer<'a> {
                 '}' | ')' | ']' => Some(self.lex_close_brace(character)),
 
                 // If the character is an operator, we need to check if it is a single or a double character operator.
-                '+' | '-' | '*' | '/' | '=' | '<' | '>' | '!' | '&' | '|' => Some(self.lex_operator(character)),
+                // FIX: Since we are only looking at a single character, we can't check for double character operators.
+                character if OPERATORS.contains_key(&character.to_string()) => {
+                    Some(self.lex_operator(character))
+                }
 
                 // If the character is a digit, then we need to continue reading the number until we reach a non-digit character.
                 // We can then return the number as a token.
                 '0'..='9' => Some(self.lex_numeric(character)),
+
+                // If the character is a double quote, then it must be the start of a string.
+                // We can then continue reading the string until we reach another double quote.
+                '"' => Some(self.lex_string(character)),
 
                 // If the character is a letter, then we need to continue reading the identifier until we reach a non-letter character.
                 // We can then return the identifier as a token.
@@ -43,12 +48,13 @@ impl<'a> Iterator for Lexer<'a> {
         let input_str = self.input.as_str();
         Lexer {
             input: input_str.chars(),
-            
+
             line: self.line,
             column: self.column,
 
             braces_balancer: self.braces_balancer,
-        }.take(n)
+        }
+        .take(n)
     }
 }
 
@@ -56,7 +62,7 @@ impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Self {
         Self {
             input: input.chars(),
-            
+
             line: 1,
             column: 1,
 
@@ -64,7 +70,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn skip_to_next_char(&mut self) -> Option<char>{
+    pub fn skip_to_next_char(&mut self) -> Option<char> {
         while let Some(character) = self.input.by_ref().peekable().peek() {
             if !character.is_whitespace() {
                 return Some(*character);
@@ -79,10 +85,10 @@ impl<'a> Lexer<'a> {
         if self.input.as_str().is_empty() {
             return None;
         }
-        
+
         let mut lexer = Lexer {
             input: self.input.as_str().chars(),
-            
+
             line: self.line,
             column: self.column,
 
@@ -113,12 +119,14 @@ impl<'a> Lexer<'a> {
                 self.braces_balancer.pop();
                 return Ok(token!(BRACE, character));
             } else {
-                return Err(format!("Mismatched braces: {} and {}", brace_token, character));
+                return Err(format!(
+                    "Mismatched braces: {} and {}",
+                    brace_token, character
+                ));
             }
         } else {
             return Err(format!("Unmatched close brace: {}", character));
         }
-        
     }
 
     fn lex_operator(&mut self, character: char) -> TokenResult {
@@ -130,14 +138,12 @@ impl<'a> Lexer<'a> {
 
         if let Some(next_character) = self.input.to_owned().peekable().peek() {
             let next_character = *next_character;
-            match next_character {
-                // If the next character is the same as the current, or it is an `=`, we can push it
-                // onto the operator string and return the operator as a token.
-                next_character if next_character == character || next_character == '=' => {
-                    operator.push(next_character);
-                    self.input.next();
-                },
-                _ => return Ok(token!(OPERATOR, operator)),
+            operator.push(next_character);
+            if OPERATORS.contains_key(operator.as_str()) {
+                self.input.next();
+                return Ok(token!(OPERATOR, operator));
+            } else {
+                return Ok(token!(OPERATOR, character));
             }
         }
 
@@ -151,14 +157,43 @@ impl<'a> Lexer<'a> {
         value.push(character);
 
         while let Some(character) = self.input.next() {
-            if character.is_numeric() || ( character == '.' && !has_point ) {
+            if character.is_numeric() || (character == '.' && !has_point) {
                 value.push(character);
             } else {
-                break;
+                // We can check the next character too to check if there is a syntax error.
+                // For example, `1.2.3` is not a valid number, and `123abc` is not a valid identifier
+                // (because it starts with a number).
+                if OPERATORS.contains_key(&character.to_string()) || character.is_whitespace() {
+                    return Ok(token!(NUMERIC, value));
+                } else {
+                    return Err(format!("Invalid number: {}", value));
+                }
             }
         }
 
         Ok(token!(NUMERIC, value))
+    }
+
+    fn lex_string(&mut self, character: char) -> TokenResult {
+        let mut str = String::new();
+        let mut escaped = false;
+
+        // Check if the next character is a double quote and that the escape flag is false.
+        // If it is, then we can return an empty string as a token.
+        while let Some(next_character) = self.input.to_owned().peekable().peek() {
+            if next_character == &'"' && !escaped {
+                self.input.next();
+                return Ok(token!(STRING, str));
+            } else if next_character == &'\\' {
+                escaped = true;
+                self.input.next();
+            } else {
+                escaped = false;
+                str.push(self.input.next().unwrap());
+            }
+        }
+
+        Ok(token!(STRING, str))
     }
 
     fn lex_identifier(&mut self, character: char) -> TokenResult {
@@ -172,23 +207,33 @@ impl<'a> Lexer<'a> {
             match character {
                 'a'..='z' | 'A'..='Z' | '_' | '0'..='9' => buf.push(character),
                 c if c.is_whitespace() => {
-                    return Ok(token!(IDENTIFIER, buf));
-                },
+                    // We can return the identifier as a token.
+                    // However, we to do a check to see if the identifier is a keyword.
+                    // If it is, we can return the keyword as a token.
+                    // If it is not, we can return the identifier as a token.
+                    // Keywords are stored inside the `KEYWORDS` map which is a constant static map.
+                    // We can use the .contains_key() method to check if the identifier is a keyword.
+                    // The macro token_from_keyword!() is used to determine whether or not the identifier is a keyword or not.
+                    // It returns a token with the correct type (either KEYWORD or IDENTIFIER).
+                    return Ok(token_from_keyword!(&buf));
+                }
                 // It is not a valid identifier character nor is it whitespace.
                 // We need to return an error and stop lexing.
-                _ => return Err(format!("Character `{}` cannot be used in an identifier", character)),
+                _ => {
+                    return Err(format!(
+                        "Character `{}` cannot be used in an identifier",
+                        character
+                    ))
+                }
             }
         }
 
         self.input.next();
 
-        Ok(token!(IDENTIFIER, buf))
+        Ok(token_from_keyword!(&buf))
     }
 
-    
     fn lex_comment(&mut self, character: char) -> TokenResult {
-        // TODO: Add support for other platforms
-
         let mut is_multi_line = false;
         if let Some(next_character) = self.input.next() {
             if next_character == '-' {
@@ -212,10 +257,10 @@ impl<'a> Lexer<'a> {
         } else {
             while let Some(character) = self.input.next() {
                 if character == '\n' {
-                    return Ok(token!(NOP, ""));
+                    break;
                 }
             }
-        return Ok(token!(NOP, ""));
+            return Ok(token!(NOP, ""));
         }
     }
 }
