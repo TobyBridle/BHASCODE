@@ -22,14 +22,14 @@ impl<'a> Iterator for Lexer<'a> {
 
                 // If the character is a double quote, then it must be the start of a string.
                 // We can then continue reading the string until we reach another double quote.
-                '"' => Some(self.lex_string(character)),
+                '"' => Some(self.lex_string()),
 
                 // If the character is a letter, then we need to continue reading the identifier until we reach a non-letter character.
                 // We can then return the identifier as a token.
                 'a'..='z' | 'A'..='Z' | '_' => Some(self.lex_identifier(character)),
 
                 // If the character is a `#`, we know it is the start of either a single or multi-line comment
-                '#' => Some(self.lex_comment(character)),
+                '#' => Some(self.lex_comment()),
 
                 _ => {
                     // It is either an operator or an error.
@@ -187,7 +187,7 @@ impl<'a> Lexer<'a> {
     /// Lexes a string token by consuming the input until an unescaped closing quote is found.
     ///
     /// * `character`:
-    fn lex_string(&mut self, character: char) -> TokenResult {
+    fn lex_string(&mut self) -> TokenResult {
         let mut str = String::new();
         let mut escaped = false;
 
@@ -253,7 +253,7 @@ impl<'a> Lexer<'a> {
     /// `-#` is found (multi-line comments).
     ///
     /// * `character`:
-    fn lex_comment(&mut self, character: char) -> TokenResult {
+    fn lex_comment(&mut self) -> TokenResult {
         let mut is_multi_line = false;
         if let Some(next_character) = self.input.next() {
             if next_character == '-' {
