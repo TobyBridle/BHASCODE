@@ -17,7 +17,24 @@ ii. `#[macro_use]` is used to import the macro from the crate root.
 
 ------------------------------------------------------------------------------------
 
+LIST OF IMPLEMENTED MACROS:
+
+- Produce a prettier error message
+    tagged_error(tag, message)
+
+------------------------------------------------------------------------------------
+
 */
+
+#[macro_export]
+macro_rules! tagged_error {
+    ($tag: expr, $msg: expr) => {
+        format!(
+            "\x1b[31;1mError: <{}> \x1b[31;3m\x1b[31m{}\x1b[0;0m",
+            $tag, $msg
+        )
+    };
+}
 
 /*
 
@@ -51,7 +68,7 @@ LIST OF IMPLEMENTED MACROS:
 macro_rules! check_tokens {
     ($lexer:expr, $($expected:expr),+) => {
         $(
-            let token = $lexer.next().unwrap().unwrap();
+            let token = $lexer.next().unwrap();
             // Check if the found token is NOP
             if token.token != TokenType::NOP {
                 println!("{:?}", token);
@@ -65,8 +82,8 @@ macro_rules! check_tokens {
 macro_rules! consume {
     ($lexer:expr, $tokens:expr, $closure:expr) => {
         for token in $lexer {
-            if $closure(token.clone().unwrap()) {
-                $tokens.push(token.unwrap());
+            if $closure(token.clone()) {
+                $tokens.push(token);
             }
         }
     };

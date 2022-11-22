@@ -1,13 +1,14 @@
 use crate::lexer::*;
+use crate::tagged_error;
 use crate::token_from_keyword;
 
 impl<'a> Iterator for Lexer<'a> {
-    type Item = TokenResult;
+    type Item = Token;
 
     /// Retrieves the next tokens from the lexer (or None if there are no more tokens)
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(character) = self.skip_to_next_char() {
-            match character {
+            let token: Option<TokenResult> = match character {
                 // If the character is an open brace, we can give it a unique id.
                 // We can then check if there is a corresponding close brace.
                 // If not, then we can throw an error before we even start parsing.
@@ -35,7 +36,30 @@ impl<'a> Iterator for Lexer<'a> {
                     // It is either an operator or an error.
                     Some(self.lex_operator(character))
                 }
-            }
+            };
+
+            /* TODO: NICER ERROR MESSAGES
+             * E.g lexing ".123" returns an error with something such as:
+             *      "Error: <LEXER> Unexpected token `.` at 0:0"
+             * We need to find the errors and convert them into an Error token with the value
+             * of tagged_error!("LEXER", error.unwrap())
+             * Somehow, we need to format the error message by including the line and column number at
+             * which the error occured.
+             * When we return the Err(val) from a function, we need to be careful with the ownership.
+             * All functions take lexer as a mutable argument and thus take ownership too.
+             * */
+            /* INFO: Handling errors automatically
+             * We want to pass the token to a closure which can return either a valid Token or an
+             * Error Token
+             * */
+            let handle_err = |token: Option<TokenResult>| -> Token {
+                if let Some(token) = token {
+                    return token.unwrap_or_else(|err| token!(ERR, tagged_error!("LEXER", err)));
+                } else {
+                    token!(ERR, tagged_error!("LEXER", "Unexpected error occured!"))
+                }
+            };
+            return Some(handle_err(token));
         } else {
             return None;
         }
@@ -57,20 +81,33 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    pub fn next_char(&mut self) -> Option<char> {
+        if let Some(character) = self.input.next() {
+            if character == '\n' {
+                self.column = 0;
+                self.line += 1;
+            } else {
+                self.column += 1;
+            }
+            return Some(character);
+        }
+        None
+    }
+
     /// Skips to the next character in the input, ignoring whitespace.
-    pub fn skip_to_next_char(&mut self) -> Option<char> {
+    fn skip_to_next_char(&mut self) -> Option<char> {
         while let Some(character) = self.input.by_ref().peekable().peek() {
             if !character.is_whitespace() {
                 return Some(*character);
             } else {
-                return self.input.next();
+                return self.next_char();
             }
         }
         None
     }
 
     /// Returns the next token in the lexer without consuming it
-    pub fn peek(&mut self) -> Option<TokenResult> {
+    pub fn peek(&mut self) -> Option<Token> {
         if self.input.as_str().is_empty() {
             return None;
         }
@@ -116,7 +153,13 @@ impl<'a> Lexer<'a> {
             '}' => '{',
             ')' => '(',
             ']' => '[',
-            _ => return Err(format!("Unknown token: {}", character)),
+            _ => {
+                return Err(format!(
+                    "Unknown token: {} at {}",
+                    character,
+                    self.get_position()
+                ))
+            }
         };
 
         if let Some(brace_token) = self.braces_balancer.iter().peekable().peek() {
@@ -125,12 +168,18 @@ impl<'a> Lexer<'a> {
                 return Ok(token!(BRACE, character));
             } else {
                 return Err(format!(
-                    "Mismatched braces: {} and {}",
-                    brace_token, character
+                    "Mismatched braces: {} and {} at {}",
+                    brace_token,
+                    character,
+                    self.get_position()
                 ));
             }
         } else {
-            return Err(format!("Unmatched close brace: {}", character));
+            return Err(format!(
+                "Unmatched close brace: {} at {}",
+                character,
+                self.get_position()
+            ));
         }
     }
 
@@ -148,10 +197,14 @@ impl<'a> Lexer<'a> {
             Ok(token!(OPERATOR, character))
         } else {
             if OPERATORS.contains_key(&operators) {
-                self.input.next();
+                self.next_char();
                 Ok(token!(OPERATOR, operators))
             } else {
-                Err(format!("Unknown token: {}", character))
+                Err(format!(
+                    "Unknown token: {} at {}",
+                    character,
+                    self.get_position()
+                ))
             }
         }
     }
@@ -166,7 +219,7 @@ impl<'a> Lexer<'a> {
 
         value.push(character);
 
-        while let Some(character) = self.input.next() {
+        while let Some(character) = self.next_char() {
             if character.is_numeric() || (character == '.' && !has_point) {
                 value.push(character);
             } else {
@@ -195,14 +248,14 @@ impl<'a> Lexer<'a> {
         // If it is, then we can return an empty string as a token.
         while let Some(next_character) = self.input.to_owned().peekable().peek() {
             if next_character == &'"' && !escaped {
-                self.input.next();
+                self.next_char();
                 return Ok(token!(STRING, str));
             } else if next_character == &'\\' {
                 escaped = true;
-                self.input.next();
+                self.next_char();
             } else {
                 escaped = false;
-                str.push(self.input.next().unwrap());
+                str.push(self.next_char().unwrap());
             }
         }
 
@@ -219,7 +272,7 @@ impl<'a> Lexer<'a> {
         // We want to continue until we get to a character that cannot be used
         // in an identifier.
         // This includes whitespace, operators, braces and punctuation (with the exclusion of `_`).
-        while let Some(character) = self.input.next() {
+        while let Some(character) = self.next_char() {
             match character {
                 'a'..='z' | 'A'..='Z' | '_' | '0'..='9' => buf.push(character),
                 c if c.is_whitespace() => {
@@ -244,7 +297,7 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        self.input.next();
+        self.next_char();
 
         Ok(token_from_keyword!(&buf))
     }
@@ -255,7 +308,7 @@ impl<'a> Lexer<'a> {
     /// * `character`:
     fn lex_comment(&mut self) -> TokenResult {
         let mut is_multi_line = false;
-        if let Some(next_character) = self.input.next() {
+        if let Some(next_character) = self.next_char() {
             if next_character == '-' {
                 is_multi_line = true;
             }
@@ -264,9 +317,9 @@ impl<'a> Lexer<'a> {
         // If multi-line, continue until we find a `-#` sequence.
         // If single-line, continue until we find a newline.
         if is_multi_line {
-            while let Some(character) = self.input.next() {
+            while let Some(character) = self.next_char() {
                 if character == '-' {
-                    if let Some(next_character) = self.input.next() {
+                    if let Some(next_character) = self.next_char() {
                         if next_character == '#' {
                             return Ok(token!(NOP, ""));
                         }
@@ -275,12 +328,16 @@ impl<'a> Lexer<'a> {
             }
             return Err("Unterminated multi-line comment".to_string());
         } else {
-            while let Some(character) = self.input.next() {
+            while let Some(character) = self.next_char() {
                 if character == '\n' {
                     break;
                 }
             }
             return Ok(token!(NOP, ""));
         }
+    }
+
+    fn get_position(&self) -> String {
+        format!("{}:{}", self.line, self.column)
     }
 }

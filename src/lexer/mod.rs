@@ -64,6 +64,10 @@ pub enum TokenType {
     // NOP is a special token that is used when the lexer has scanned
     // something that is not a useful token, but also not an error.
     NOP,
+
+    // Since all tokens passed must have a token type, we use this to indicate an error.
+    // Errors are prettiered using the `tagged_error!` macro during the lexing stage.
+    ERR,
 }
 
 /*

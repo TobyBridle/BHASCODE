@@ -102,7 +102,7 @@ mod lexer_tests {
     fn test_lexer_invalid_token() {
         let mut lexer_invalid_ident = Lexer::new("int$$x = 10 + 20");
         // It should throw an error for the invalid token.
-        assert!(lexer_invalid_ident.next().unwrap().is_err());
+        assert!(lexer_invalid_ident.next().unwrap().token == TokenType::ERR);
 
         let mut lexer_invalid_brace = Lexer::new("{}[])]}");
 
@@ -112,29 +112,29 @@ mod lexer_tests {
             lexer_invalid_brace.next().unwrap();
         }
 
-        assert!(lexer_invalid_brace.next().unwrap().is_err());
+        assert!(lexer_invalid_brace.next().unwrap().token == TokenType::ERR);
 
         // Check that variable names can't start with a number.
         let mut lexer_ident_with_number = Lexer::new("int 1x = 10 + 20");
-        assert!(lexer_ident_with_number.nth(1).unwrap().is_err());
+        assert!(lexer_ident_with_number.nth(1).unwrap().token == TokenType::ERR);
     }
 
     #[test]
     fn test_lexer_peek() {
         let mut lexer = Lexer::new("int x = 10 + 20");
-        assert_eq!(lexer.peek().unwrap().unwrap().token, TokenType::KEYWORD);
-        assert_eq!(lexer.peek().unwrap().unwrap().token, TokenType::KEYWORD);
-        assert_eq!(lexer.next().unwrap().unwrap().token, TokenType::KEYWORD);
-        assert_eq!(lexer.peek().unwrap().unwrap().token, TokenType::IDENTIFIER);
-        assert_eq!(lexer.next().unwrap().unwrap().token, TokenType::IDENTIFIER);
-        assert_eq!(lexer.peek().unwrap().unwrap().token, TokenType::OPERATOR);
-        assert_eq!(lexer.next().unwrap().unwrap().token, TokenType::OPERATOR);
-        assert_eq!(lexer.peek().unwrap().unwrap().token, TokenType::NUMERIC);
-        assert_eq!(lexer.next().unwrap().unwrap().token, TokenType::NUMERIC);
-        assert_eq!(lexer.peek().unwrap().unwrap().token, TokenType::OPERATOR);
-        assert_eq!(lexer.next().unwrap().unwrap().token, TokenType::OPERATOR);
-        assert_eq!(lexer.peek().unwrap().unwrap().token, TokenType::NUMERIC);
-        assert_eq!(lexer.next().unwrap().unwrap().token, TokenType::NUMERIC);
+        assert_eq!(lexer.peek().unwrap().token, TokenType::KEYWORD);
+        assert_eq!(lexer.peek().unwrap().token, TokenType::KEYWORD);
+        assert_eq!(lexer.next().unwrap().token, TokenType::KEYWORD);
+        assert_eq!(lexer.peek().unwrap().token, TokenType::IDENTIFIER);
+        assert_eq!(lexer.next().unwrap().token, TokenType::IDENTIFIER);
+        assert_eq!(lexer.peek().unwrap().token, TokenType::OPERATOR);
+        assert_eq!(lexer.next().unwrap().token, TokenType::OPERATOR);
+        assert_eq!(lexer.peek().unwrap().token, TokenType::NUMERIC);
+        assert_eq!(lexer.next().unwrap().token, TokenType::NUMERIC);
+        assert_eq!(lexer.peek().unwrap().token, TokenType::OPERATOR);
+        assert_eq!(lexer.next().unwrap().token, TokenType::OPERATOR);
+        assert_eq!(lexer.peek().unwrap().token, TokenType::NUMERIC);
+        assert_eq!(lexer.next().unwrap().token, TokenType::NUMERIC);
         assert!(lexer.peek().is_none());
         assert!(lexer.next().is_none());
     }
@@ -188,7 +188,7 @@ mod lexer_tests {
         let mut lexer_multi_line_unterminated =
             Lexer::new("#- This is a multi-line comment\n int x = 5");
         tokens.clear();
-        assert!(lexer_multi_line_unterminated.next().unwrap().is_err());
+        assert!(lexer_multi_line_unterminated.next().unwrap().token == TokenType::ERR);
 
         let mut lexer_multi_line_unterminated_with_tokens = Lexer::new("int y = 10 # This stuff should still be registered\n#- This is a multi-line comment\n int x = 5 int y = 10");
         tokens.clear();
@@ -196,24 +196,27 @@ mod lexer_tests {
         for _ in 0..4 {
             println!(
                 "{:?}",
-                lexer_multi_line_unterminated_with_tokens
-                    .next()
-                    .unwrap()
-                    .unwrap()
+                lexer_multi_line_unterminated_with_tokens.next().unwrap()
             );
         }
 
         // The next token should still be fine as it is a single-line comment
-        assert!(lexer_multi_line_unterminated_with_tokens
-            .next()
-            .unwrap()
-            .is_ok());
+        assert!(
+            lexer_multi_line_unterminated_with_tokens
+                .next()
+                .unwrap()
+                .token
+                != TokenType::ERR
+        );
 
         // The next token should be an error as it is an unterminated multi-line comment
-        assert!(lexer_multi_line_unterminated_with_tokens
-            .next()
-            .unwrap()
-            .is_err());
+        assert!(
+            lexer_multi_line_unterminated_with_tokens
+                .next()
+                .unwrap()
+                .token
+                == TokenType::ERR
+        );
     }
 
     #[test]
